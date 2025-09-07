@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "box.tapsi.libs"
-version = "0.0.1-SNAPSHOT"
+version = "0.9.0"
 description = "scheduler-starter"
 
 java {
@@ -20,13 +20,7 @@ java {
 }
 
 repositories {
-  maven {
-    url = uri("https://artifactory.tapsi.tech/artifactory/doroshke-gradle")
-    credentials {
-      username = "gitlab"
-      password = "AP4PEgFyrKeMHeDH7JBHDQPDFYn"
-    }
-  }
+  mavenCentral()
 }
 
 dependencies {

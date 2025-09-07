@@ -59,7 +59,7 @@ scheduling with automatic configuration, retry mechanisms, and comprehensive mon
 <dependency>
     <groupId>box.tapsi.libs</groupId>
     <artifactId>scheduler-starter</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.9.0</version>
 </dependency>
 ```
 

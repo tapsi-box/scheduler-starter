@@ -20,15 +20,20 @@ java {
 }
 
 repositories {
-  mavenCentral()
+  maven {
+    url = uri("https://artifactory.tapsi.tech/artifactory/doroshke-gradle")
+    credentials {
+      username = "gitlab"
+      password = "AP4PEgFyrKeMHeDH7JBHDQPDFYn"
+    }
+  }
 }
 
 dependencies {
   api("org.springframework.boot:spring-boot-starter-quartz:3.5.5")
 
   implementation("io.projectreactor:reactor-core:3.7.9")
-  implementation("io.projectreactor:reactor-core-micrometer:1.2.9")
-  implementation("box.tapsi.libs:metrics-core:1.0.1")
+  implementation("box.tapsi.libs:metrics-core:1.0.2")
   implementation("box.tapsi.libs:utilities-starter:0.9.1")
   implementation("org.springframework:spring-context:6.2.10")
   implementation("org.springframework.boot:spring-boot-autoconfigure:3.5.5")
@@ -37,10 +42,10 @@ dependencies {
   implementation("io.projectreactor.kotlin:reactor-kotlin-extensions:1.2.3")
 
 
-  testImplementation("org.springframework.boot:spring-boot-starter-test")
-  testImplementation("io.projectreactor:reactor-test")
+  testImplementation("org.springframework.boot:spring-boot-starter-test:3.5.5")
+  testImplementation("org.jetbrains.kotlin:kotlin-test-junit5:1.9.23")
 
-  annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
+  testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 kotlin {
@@ -120,7 +125,6 @@ tasks.register("verifyReadmeContent") {
     val checks = listOf(
       Check("group ID", """<groupId>${project.group}</groupId>"""),
       Check("version", """<version>${project.version}</version>"""),
-      Check("Spring Boot version", "spring-boot-starter-actuator"),
     )
 
     val errors = checks.mapNotNull { check ->

@@ -1,0 +1,45 @@
+{
+  "groups": [
+    {
+      "name": "box.libs.scheduler",
+      "type": "box.tapsi.libs.scheduler.SchedulerProperties",
+      "sourceType": "box.tapsi.libs.scheduler.SchedulerProperties",
+      "description": "Tapsi Scheduler configuration properties for job scheduling and Quartz integration."
+    },
+    {
+      "name": "box.libs.scheduler.quartz",
+      "type": "box.tapsi.libs.scheduler.SchedulerProperties$Quartz",
+      "sourceType": "box.tapsi.libs.scheduler.SchedulerProperties$Quartz",
+      "description": "Quartz scheduler configuration properties."
+    },
+    {
+      "name": "box.libs.scheduler.cron-job",
+      "type": "box.tapsi.libs.scheduler.SchedulerProperties$CronJob",
+      "sourceType": "box.tapsi.libs.scheduler.SchedulerProperties$CronJob",
+      "description": "Cron job auto-scheduling configuration properties."
+    }
+  ],
+  "properties": [
+    {
+      "name": "box.libs.scheduler.quartz.enabled",
+      "type": "java.lang.Boolean",
+      "sourceType": "box.tapsi.libs.scheduler.SchedulerProperties$Quartz",
+      "description": "Whether to enable Quartz scheduler integration. When disabled, scheduler interface will not schedule on the quartz infrastructure.",
+      "defaultValue": true
+    },
+    {
+      "name": "box.libs.scheduler.cron-job.scheduling-enabled",
+      "type": "java.lang.Boolean",
+      "sourceType": "box.tapsi.libs.scheduler.SchedulerProperties$CronJob",
+      "description": "Whether to enable automatic scheduling of cron jobs. When enabled, all CronScheduler beans will be automatically scheduled at startup.",
+      "defaultValue": false
+    },
+    {
+      "name": "box.libs.scheduler.cron-job.scheduling-excludes",
+      "type": "java.util.List<java.lang.String>",
+      "sourceType": "box.tapsi.libs.scheduler.SchedulerProperties$CronJob",
+      "description": "List of bean names of CronScheduler beans to exclude from automatic scheduling. Useful for selectively disabling certain cron jobs.",
+      "defaultValue": []
+    }
+  ]
+}

@@ -1,1 +1,1 @@
-rootProject.name = "reactive-quartz"
+rootProject.name = "scheduler-starter"

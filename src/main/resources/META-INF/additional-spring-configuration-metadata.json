@@ -1,0 +1,49 @@
+{
+  "hints": [
+    {
+      "name": "box.libs.scheduler.cron-job.scheduling-excludes",
+      "valueType": "java.lang.String",
+      "description": "Specify bean names of CronScheduler beans to skip during auto-scheduling. These should be the exact bean names as they appear in the Spring context.",
+      "values": [
+        {
+          "value": "myCronScheduler",
+          "description": "Example: Exclude a specific cron scheduler bean."
+        },
+        {
+          "value": "dataSyncCronScheduler",
+          "description": "Example: Exclude data synchronization cron job."
+        }
+      ]
+    },
+    {
+      "name": "box.libs.scheduler.quartz.enabled",
+      "valueType": "java.lang.Boolean",
+      "description": "Controls whether Quartz scheduler integration is enabled. When false, all scheduler-related beans will be disabled.",
+      "values": [
+        {
+          "value": "true",
+          "description": "Enable Quartz scheduler (default)."
+        },
+        {
+          "value": "false",
+          "description": "Disable Quartz scheduler - useful for testing or when using alternative scheduling mechanisms."
+        }
+      ]
+    },
+    {
+      "name": "box.libs.scheduler.cron-job.scheduling-enabled",
+      "valueType": "java.lang.Boolean",
+      "description": "Controls automatic scheduling of cron jobs at application startup. When enabled, all CronScheduler beans will be automatically scheduled.",
+      "values": [
+        {
+          "value": "true",
+          "description": "Enable automatic cron job scheduling."
+        },
+        {
+          "value": "false",
+          "description": "Disable automatic cron job scheduling (default) - schedule jobs manually."
+        }
+      ]
+    }
+  ]
+}

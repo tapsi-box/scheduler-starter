@@ -16,6 +16,7 @@ import reactor.core.publisher.Mono
 import java.lang.reflect.Method
 import java.time.Instant
 import java.util.concurrent.TimeUnit
+import kotlin.math.pow
 import kotlin.reflect.KClass
 import kotlin.reflect.full.isSuperclassOf
 
@@ -46,10 +47,20 @@ class RetryJobInterceptor(
     annotationClass: Class<T>,
   ): T? = AnnotatedElementUtils.findMergedAnnotation(method.declaringClass, annotationClass)
 
-  private fun getNextFireTime(): Instant = timeOperator.addToCurrentTime(
-    FIXED_OFFSET_RETRY_MILLIS,
-    TimeUnit.MILLISECONDS,
-  )
+  private fun computeNextFireTime(reactiveRetryable: ReactiveRetryable, retryCount: Int): Instant {
+    val delay = computeDelayMillis(reactiveRetryable, retryCount)
+    return timeOperator.addToCurrentTime(delay, TimeUnit.MILLISECONDS)
+  }
+
+  internal fun computeDelayMillis(reactiveRetryable: ReactiveRetryable, retryCount: Int): Long {
+    if (reactiveRetryable.exponentialBackoff) {
+      val minDelay = reactiveRetryable.backOffMinDelay.takeIf { it > 0 } ?: FIXED_OFFSET_RETRY_MILLIS
+      val maxDelay = reactiveRetryable.backOffMaxDelay.takeIf { it > 0 } ?: Long.MAX_VALUE
+      val factor = reactiveRetryable.backOffFactor.takeIf { it > 0 } ?: DEFAULT_BACKOFF_FACTOR
+      return (minDelay * factor.pow(retryCount.toDouble())).toLong().coerceAtMost(maxDelay)
+    }
+    return reactiveRetryable.backOffFixDelay.takeIf { it > 0 } ?: FIXED_OFFSET_RETRY_MILLIS
+  }
 
   @Suppress("SpreadOperator", "TooGenericExceptionCaught")
   private fun <T : Annotation> findAnnotationOnTarget(target: Any, method: Method, annotation: Class<T>): T? = try {
@@ -131,7 +142,7 @@ class RetryJobInterceptor(
     reactiveRetryable: ReactiveRetryable,
     scheduler: TJob,
   ): Mono<Void> = checkExhaustedRetry(retryCount, reactiveRetryable, invocation.method.declaringClass.simpleName)
-    .thenReturn(getNextFireTime())
+    .thenReturn(computeNextFireTime(reactiveRetryable, retryCount))
     .doOnNext {
       logger.info(
         "Job ${invocation.method.declaringClass.simpleName} will be retried at $it later",
@@ -156,6 +167,7 @@ class RetryJobInterceptor(
   companion object {
     const val RETRY_COUNT_JOB_STORE_KEY = "retryCount"
     const val FIXED_OFFSET_RETRY_MILLIS = 60 * 1000L
+    const val DEFAULT_BACKOFF_FACTOR = 2.0
     const val RETRY_JOB_INTERCEPTOR_NAME = "retryJobInterceptor"
     const val JOB_STORE_INDEX = 0
   }

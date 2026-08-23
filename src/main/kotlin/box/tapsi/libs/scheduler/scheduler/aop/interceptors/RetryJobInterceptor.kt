@@ -1,5 +1,6 @@
 package box.tapsi.libs.scheduler.scheduler.aop.interceptors
 
+import box.tapsi.libs.scheduler.quartz.metric.registry.QuartzRegistry
 import box.tapsi.libs.scheduler.scheduler.SchedulerException
 import box.tapsi.libs.scheduler.scheduler.schedulers.CronScheduler
 import box.tapsi.libs.scheduler.scheduler.schedulers.DefaultScheduler
@@ -24,6 +25,7 @@ import kotlin.reflect.full.isSuperclassOf
 @Suppress("TooManyFunctions")
 class RetryJobInterceptor(
   private val timeOperator: TimeOperator,
+  private val quartzRegistry: QuartzRegistry,
 ) : MethodInterceptor {
   private val logger = LoggerFactory.getLogger(this::class.java)
 
@@ -142,14 +144,26 @@ class RetryJobInterceptor(
     reactiveRetryable: ReactiveRetryable,
     scheduler: TJob,
   ): Mono<Void> = checkExhaustedRetry(retryCount, reactiveRetryable, invocation.method.declaringClass.simpleName)
+    .doOnError(SchedulerException.ExhaustedJobRetryException::class.java) {
+      incrementRetryCounter(scheduler, QuartzRegistry.RetryResult.Exhausted)
+    }
     .thenReturn(computeNextFireTime(reactiveRetryable, retryCount))
     .doOnNext {
+      incrementRetryCounter(scheduler, QuartzRegistry.RetryResult.Retried)
       logger.info(
         "Job ${invocation.method.declaringClass.simpleName} will be retried at $it later",
       )
     }.flatMap { fireTimestamp ->
       scheduler.schedule(jobStore, fireTimestamp)
     }
+
+  private fun incrementRetryCounter(scheduler: DefaultScheduler, result: QuartzRegistry.RetryResult) {
+    quartzRegistry.incrementRetry(
+      job = scheduler::class.simpleName ?: UNKNOWN_JOB,
+      jobGroup = scheduler.getJobGroup().value,
+      result = result,
+    )
+  }
 
   private fun checkExhaustedRetry(retryCount: Int, reactiveRetryable: ReactiveRetryable, jobName: String): Mono<Void> {
     if (retryCount + 1 > reactiveRetryable.maxAttempts) {
@@ -170,5 +184,6 @@ class RetryJobInterceptor(
     const val DEFAULT_BACKOFF_FACTOR = 2.0
     const val RETRY_JOB_INTERCEPTOR_NAME = "retryJobInterceptor"
     const val JOB_STORE_INDEX = 0
+    private const val UNKNOWN_JOB = "unknown"
   }
 }

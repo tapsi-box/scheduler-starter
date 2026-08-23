@@ -8,6 +8,7 @@ import org.quartz.JobDataMap
 import org.quartz.JobDetail
 import org.quartz.JobKey
 import org.quartz.JobListener
+import org.quartz.ObjectAlreadyExistsException
 import org.quartz.SchedulerListener
 import org.quartz.Trigger
 import org.quartz.TriggerKey
@@ -17,6 +18,7 @@ import org.quartz.plugins.history.LoggingJobHistoryPlugin
 import org.quartz.plugins.history.LoggingTriggerHistoryPlugin
 import org.slf4j.Logger
 import org.springframework.beans.factory.InitializingBean
+import org.springframework.beans.factory.getBeansWithAnnotation
 import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.Primary
 import org.springframework.scheduling.quartz.SchedulerFactoryBean
@@ -52,21 +54,41 @@ class QuartzServiceImpl(
     .requestRecovery()
     .build()
 
-  override fun scheduleJob(jobDetail: JobDetail, trigger: Trigger): Mono<Void> = Mono.fromRunnable<Void?> {
-    schedulerFactoryBean.scheduler.scheduleJob(jobDetail, trigger)
-  }.transform { quartzRegistry.exposeSchedulingMetrics(it, jobDetail) }
-    .doOnSuccess {
+  override fun scheduleJob(jobDetail: JobDetail, trigger: Trigger): Mono<Void> = Mono.defer {
+    val startNanos = System.nanoTime()
+    Mono.fromRunnable<Void?> {
+      schedulerFactoryBean.scheduler.scheduleJob(jobDetail, trigger)
+    }.doOnSuccess {
+      quartzRegistry.recordScheduling(
+        jobDetail,
+        trigger,
+        QuartzRegistry.SchedulingOutcome.Success,
+        elapsedMillis(startNanos),
+      )
       logger.info(
         "Job scheduled successfully with job name: ${jobDetail.key} and trigger: ${trigger.nextFireTime}",
       )
-    }.doOnError {
-      logger.error(
-        "Error in job scheduling with job name: ${jobDetail.key} and trigger: ${trigger.nextFireTime}",
-        it,
-      )
+    }.doOnError { throwable ->
+      val outcome = if (throwable is ObjectAlreadyExistsException) {
+        QuartzRegistry.SchedulingOutcome.AlreadyExists
+      } else {
+        QuartzRegistry.SchedulingOutcome.Failure
+      }
+      quartzRegistry.recordScheduling(jobDetail, trigger, outcome, elapsedMillis(startNanos))
+      // The already-exists case is expected for cron re-registration and is logged by the caller,
+      // so only real failures are logged here to avoid a duplicate log line on every pod start.
+      if (outcome != QuartzRegistry.SchedulingOutcome.AlreadyExists) {
+        logger.error(
+          "Error in job scheduling with job name: ${jobDetail.key} and trigger: ${trigger.nextFireTime}",
+          throwable,
+        )
+      }
     }
+  }
 
-  override fun deleteJob(jobKey: JobKey): Mono<Void> = Mono.fromRunnable<Void?> {
+  private fun elapsedMillis(startNanos: Long): Long = (System.nanoTime() - startNanos) / NANOS_PER_MILLI
+
+  override fun deleteJob(jobKey: JobKey): Mono<Void> = Mono.fromRunnable<Void> {
     schedulerFactoryBean.scheduler.deleteJob(jobKey)
   }.doOnSuccess {
     logger.info("Job deleted successfully with job name: ${jobKey.name} and group: ${jobKey.group}")
@@ -107,7 +129,7 @@ class QuartzServiceImpl(
   }
 
   private fun getJobListeners(applicationContext: ApplicationContext): List<JobListener> = applicationContext
-    .getBeansWithAnnotation(AnnotationsJobListener::class.java)
+    .getBeansWithAnnotation<AnnotationsJobListener>()
     .values
     .map {
       (it as JobListener).also { jobListener ->
@@ -118,7 +140,7 @@ class QuartzServiceImpl(
   private fun getSchedulerListeners(
     applicationContext: ApplicationContext,
   ): List<SchedulerListener> = applicationContext
-    .getBeansWithAnnotation(AnnotationSchedulerListener::class.java)
+    .getBeansWithAnnotation<AnnotationSchedulerListener>()
     .values
     .map {
       (it as SchedulerListener).also { schedulerListener ->
@@ -127,11 +149,15 @@ class QuartzServiceImpl(
     }
 
   private fun getTriggerListeners(applicationContext: ApplicationContext): List<TriggerListener> = applicationContext
-    .getBeansWithAnnotation(AnnotationTriggerListener::class.java)
+    .getBeansWithAnnotation<AnnotationTriggerListener>()
     .values
     .map {
       (it as TriggerListener).also { triggerListener ->
         logger.info("Found trigger listener: ${triggerListener.name}")
       }
     }
+
+  companion object {
+    private const val NANOS_PER_MILLI = 1_000_000L
+  }
 }

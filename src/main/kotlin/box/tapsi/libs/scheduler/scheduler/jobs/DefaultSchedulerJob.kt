@@ -27,6 +27,9 @@ class DefaultSchedulerJob(
   override fun executeInternal(context: JobExecutionContext) {
     logger.info("Executing job ${context.jobDetail.key.name}")
     doExecute(context)
+      // Metrics MUST wrap the raw execution, upstream of the error-swallow below, so the
+      // observation records the true terminal signal and failures are counted.
+      .transform { quartzRegistry.exposeExecutionMetrics(it, context) }
       .doOnSuccess {
         logger.info("scheduler for ${context.jobDetail?.key} executed successfully")
       }
@@ -38,7 +41,6 @@ class DefaultSchedulerJob(
         logger.error("Internal Error executing scheduler for ${context.jobDetail?.key}", it)
       }
       .addTraceIdToReactorContext()
-      .transform { quartzRegistry.exposeExecutionMetrics(it, context.jobDetail) }
       .block()
     logger.info("Job ${context.jobDetail.key.name} executed")
   }

@@ -18,7 +18,6 @@ import org.quartz.JobExecutionContext
 import org.quartz.JobKey
 import org.quartz.Trigger
 import org.quartz.TriggerKey
-import org.slf4j.Logger
 import reactor.core.publisher.Mono
 import java.util.concurrent.TimeUnit
 
@@ -32,7 +31,6 @@ class QuartzRegistryTest {
     val observationRegistry = ObservationRegistry.create()
     observationRegistry.observationConfig().observationHandler(DefaultMeterObservationHandler(registry))
     quartzRegistry = QuartzRegistry(
-      logger = mock(Logger::class.java),
       meterRegistryService = MeterRegistryServiceImpl(registry),
       observationRegistry = observationRegistry,
     )

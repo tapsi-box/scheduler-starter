@@ -1,6 +1,5 @@
 package box.tapsi.libs.scheduler.quartz.services
 
-import box.tapsi.libs.scheduler.quartz.annotations.OnQuartzEnabled
 import box.tapsi.libs.scheduler.quartz.metric.registry.QuartzRegistry
 import org.quartz.Job
 import org.quartz.JobBuilder
@@ -16,29 +15,25 @@ import org.quartz.TriggerListener
 import org.quartz.impl.matchers.GroupMatcher
 import org.quartz.plugins.history.LoggingJobHistoryPlugin
 import org.quartz.plugins.history.LoggingTriggerHistoryPlugin
-import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.beans.factory.getBeansWithAnnotation
 import org.springframework.context.ApplicationContext
-import org.springframework.context.annotation.Primary
 import org.springframework.scheduling.quartz.SchedulerFactoryBean
-import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import box.tapsi.libs.scheduler.quartz.annotations.JobListener as AnnotationsJobListener
 import box.tapsi.libs.scheduler.quartz.annotations.SchedulerListener as AnnotationSchedulerListener
 import box.tapsi.libs.scheduler.quartz.annotations.TriggerListener as AnnotationTriggerListener
 
-@Service
-@OnQuartzEnabled
-@Primary
 class QuartzServiceImpl(
-  private val logger: Logger,
   private val applicationContext: ApplicationContext,
   private val schedulerFactoryBean: SchedulerFactoryBean,
   private val quartzRegistry: QuartzRegistry,
 ) : QuartzService,
   InitializingBean {
+  private val logger = LoggerFactory.getLogger(QuartzServiceImpl::class.java)
+
   override fun <TJob : Job> createJob(
     jobClass: Class<TJob>,
     isDurable: Boolean,

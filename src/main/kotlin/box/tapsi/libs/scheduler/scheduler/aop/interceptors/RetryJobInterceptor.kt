@@ -12,7 +12,6 @@ import org.aopalliance.intercept.MethodInterceptor
 import org.aopalliance.intercept.MethodInvocation
 import org.slf4j.LoggerFactory
 import org.springframework.core.annotation.AnnotatedElementUtils
-import org.springframework.stereotype.Component
 import reactor.core.publisher.Mono
 import java.lang.reflect.Method
 import java.time.Instant
@@ -21,7 +20,6 @@ import kotlin.math.pow
 import kotlin.reflect.KClass
 import kotlin.reflect.full.isSuperclassOf
 
-@Component(RetryJobInterceptor.RETRY_JOB_INTERCEPTOR_NAME)
 @Suppress("TooManyFunctions")
 class RetryJobInterceptor(
   private val timeOperator: TimeOperator,

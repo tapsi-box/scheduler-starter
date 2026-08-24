@@ -12,12 +12,14 @@ import org.quartz.JobExecutionContext
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationContext
 import org.springframework.scheduling.quartz.QuartzJobBean
-import org.springframework.stereotype.Component
 import reactor.core.publisher.Mono
 import reactor.core.publisher.SynchronousSink
 import reactor.kotlin.core.publisher.switchIfEmpty
 
-@Component
+/**
+ * Quartz instantiates this class for every job fire through the Spring job factory, so its
+ * constructor arguments are autowired from the context. It is not registered as a bean.
+ */
 class DefaultSchedulerJob(
   private val applicationContext: ApplicationContext,
   private val quartzRegistry: QuartzRegistry,

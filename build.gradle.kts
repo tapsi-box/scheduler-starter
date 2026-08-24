@@ -23,14 +23,17 @@ repositories {
 }
 
 dependencies {
+  // `api` is required for every type that appears in a public or protected signature.
+  // A consumer extends CronScheduler/RegularScheduler and overrides methods that return
+  // Mono, catches SchedulerException (a TapsiException), and annotates its schedulers with
+  // @ReactiveRetryable. All of those types must be on the consumer's compile classpath.
   api(libs.spring.boot.starter.quartz)
+  api(libs.reactor.core)
+  api(libs.tapsi.metrics.core)
+  api(libs.tapsi.utilities.starter)
+  api(libs.projectreactor.retry.aop)
 
-  implementation(libs.reactor.core)
-  implementation(libs.tapsi.metrics.core)
-  implementation(libs.tapsi.utilities.starter)
-  implementation(libs.spring.context)
   implementation(libs.spring.boot.autoconfigure)
-  implementation(libs.projectreactor.retry.aop)
   implementation(libs.kotlin.reflect)
   implementation(libs.reactor.kotlin.extensions)
 

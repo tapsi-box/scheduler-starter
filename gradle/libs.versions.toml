@@ -6,7 +6,6 @@ reactorKotlin = "1.2.3"
 metricsCore = "1.0.2"
 utilitiesStarter = "0.9.1"
 retryAop = "2.0.0-RC2"
-springFramework = "6.2.10"
 
 mavenPublish = "0.34.0"
 spotless = "7.2.1"
@@ -14,7 +13,6 @@ detekt = "1.23.6"
 
 [libraries]
 spring-boot-starter-quartz = { module = "org.springframework.boot:spring-boot-starter-quartz", version.ref = "springBoot" }
-spring-context = { module = "org.springframework:spring-context", version.ref = "springFramework" }
 spring-boot-autoconfigure = { module = "org.springframework.boot:spring-boot-autoconfigure", version.ref = "springBoot" }
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test", version.ref = "springBoot" }
 

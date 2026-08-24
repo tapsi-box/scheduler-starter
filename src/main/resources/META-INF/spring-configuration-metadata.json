@@ -40,6 +40,13 @@
       "sourceType": "box.tapsi.libs.scheduler.SchedulerProperties$CronJob",
       "description": "List of bean names of CronScheduler beans to exclude from automatic scheduling. Useful for selectively disabling certain cron jobs.",
       "defaultValue": []
+    },
+    {
+      "name": "box.libs.scheduler.cron-job.scheduling-timeout",
+      "type": "java.time.Duration",
+      "sourceType": "box.tapsi.libs.scheduler.SchedulerProperties$CronJob",
+      "description": "How long the startup waits for the cron jobs to be scheduled. The application fails to start if the scheduling does not finish in this time.",
+      "defaultValue": "60s"
     }
   ]
 }

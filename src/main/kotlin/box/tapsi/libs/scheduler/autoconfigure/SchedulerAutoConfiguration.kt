@@ -9,8 +9,8 @@ import box.tapsi.libs.scheduler.quartz.metric.registry.QuartzRegistry
 import box.tapsi.libs.scheduler.quartz.services.NoOpQuartzService
 import box.tapsi.libs.scheduler.quartz.services.QuartzService
 import box.tapsi.libs.scheduler.quartz.services.QuartzServiceImpl
+import box.tapsi.libs.scheduler.scheduler.CronJobAutoScheduler
 import box.tapsi.libs.scheduler.scheduler.aop.interceptors.RetryJobInterceptor
-import box.tapsi.libs.scheduler.scheduler.autoconfigure.CronJobSchedulerAutoConfiguration
 import box.tapsi.libs.scheduler.scheduler.factories.QuartzJobDetailFactory
 import box.tapsi.libs.scheduler.scheduler.factories.QuartzTriggerFactory
 import box.tapsi.libs.scheduler.scheduler.services.SchedulerService
@@ -117,8 +117,8 @@ class SchedulerAutoConfiguration {
     havingValue = "true",
     matchIfMissing = false,
   )
-  fun cronJobScheduler(
+  fun cronJobAutoScheduler(
     applicationContext: ApplicationContext,
     schedulerProperties: SchedulerProperties,
-  ): CronJobSchedulerAutoConfiguration = CronJobSchedulerAutoConfiguration(applicationContext, schedulerProperties)
+  ): CronJobAutoScheduler = CronJobAutoScheduler(applicationContext, schedulerProperties)
 }

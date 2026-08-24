@@ -1,26 +1,31 @@
-package box.tapsi.libs.scheduler.scheduler.autoconfigure
+package box.tapsi.libs.scheduler.scheduler
 
 import box.tapsi.libs.scheduler.SchedulerProperties
 import box.tapsi.libs.scheduler.scheduler.schedulers.CronScheduler
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.InitializingBean
+import org.springframework.boot.ApplicationArguments
+import org.springframework.boot.ApplicationRunner
 import org.springframework.context.ApplicationContext
 import reactor.core.publisher.Mono
 
-class CronJobSchedulerAutoConfiguration(
+/**
+ * Schedules every [CronScheduler] bean once the application context is ready.
+ *
+ * It runs as an [ApplicationRunner], not as an initializing bean, for two reasons. The context is
+ * complete at that point, so the lookup finds every [CronScheduler] and forces no early bean
+ * creation. And the run blocks on the result, so a failure to schedule stops the startup instead
+ * of leaving a healthy application with no cron job registered.
+ */
+class CronJobAutoScheduler(
   private val applicationContext: ApplicationContext,
   private val schedulerProperties: SchedulerProperties,
-) : InitializingBean {
-  private val logger = LoggerFactory.getLogger(this::class.java)
+) : ApplicationRunner {
+  private val logger = LoggerFactory.getLogger(CronJobAutoScheduler::class.java)
 
-  override fun afterPropertiesSet() {
+  override fun run(args: ApplicationArguments?) {
     logger.info("Auto scheduling of cron jobs is enabled")
-    schedule()
-      .subscribe({}, {
-        logger.error("Auto scheduling of cron jobs failed", it)
-      }, {
-        logger.info("Auto scheduling of cron jobs completed")
-      })
+    schedule().block(schedulerProperties.cronJob.schedulingTimeout)
+    logger.info("Auto scheduling of cron jobs completed")
   }
 
   fun schedule(): Mono<Void> {

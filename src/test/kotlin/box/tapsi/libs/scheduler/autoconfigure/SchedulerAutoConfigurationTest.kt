@@ -7,8 +7,8 @@ import box.tapsi.libs.scheduler.quartz.metric.registry.QuartzRegistry
 import box.tapsi.libs.scheduler.quartz.services.NoOpQuartzService
 import box.tapsi.libs.scheduler.quartz.services.QuartzService
 import box.tapsi.libs.scheduler.quartz.services.QuartzServiceImpl
+import box.tapsi.libs.scheduler.scheduler.CronJobAutoScheduler
 import box.tapsi.libs.scheduler.scheduler.aop.interceptors.RetryJobInterceptor
-import box.tapsi.libs.scheduler.scheduler.autoconfigure.CronJobSchedulerAutoConfiguration
 import box.tapsi.libs.scheduler.scheduler.factories.QuartzJobDetailFactory
 import box.tapsi.libs.scheduler.scheduler.factories.QuartzTriggerFactory
 import box.tapsi.libs.scheduler.scheduler.jobs.DefaultSchedulerJob
@@ -145,18 +145,18 @@ class SchedulerAutoConfigurationTest {
   }
 
   @Test
-  fun `should not register the cron scheduler unless scheduling is enabled`() {
+  fun `should not register the cron auto scheduler unless scheduling is enabled`() {
     // given
     val runner = contextRunner.withPropertyValues("box.libs.scheduler.quartz.enabled=true")
 
     // when + verify
     runner.run { context ->
-      assertThat(context).doesNotHaveBean(CronJobSchedulerAutoConfiguration::class.java)
+      assertThat(context).doesNotHaveBean(CronJobAutoScheduler::class.java)
     }
   }
 
   @Test
-  fun `should register the cron scheduler when scheduling is enabled`() {
+  fun `should register the cron auto scheduler when scheduling is enabled`() {
     // given
     val runner = contextRunner.withPropertyValues(
       "box.libs.scheduler.quartz.enabled=true",
@@ -165,7 +165,7 @@ class SchedulerAutoConfigurationTest {
 
     // when + verify
     runner.run { context ->
-      assertThat(context).hasSingleBean(CronJobSchedulerAutoConfiguration::class.java)
+      assertThat(context).hasSingleBean(CronJobAutoScheduler::class.java)
     }
   }
 

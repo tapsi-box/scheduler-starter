@@ -9,10 +9,8 @@ import box.tapsi.libs.scheduler.scheduler.toJobDataMap
 import org.quartz.JobDataMap
 import org.quartz.JobDetail
 import org.springframework.context.ApplicationContext
-import org.springframework.stereotype.Component
 import kotlin.reflect.KClass
 
-@Component
 class QuartzJobDetailFactory(
   private val quartzService: QuartzService,
   private val applicationContext: ApplicationContext,

@@ -1,0 +1,37 @@
+[versions]
+kotlin = "1.9.23"
+springBoot = "3.5.5"
+reactor = "3.7.9"
+reactorKotlin = "1.2.3"
+metricsCore = "1.0.2"
+utilitiesStarter = "0.9.1"
+retryAop = "2.0.0-RC2"
+
+mavenPublish = "0.34.0"
+spotless = "7.2.1"
+detekt = "1.23.6"
+dokka = "1.9.20"
+
+[libraries]
+spring-boot-starter-quartz = { module = "org.springframework.boot:spring-boot-starter-quartz", version.ref = "springBoot" }
+spring-boot-autoconfigure = { module = "org.springframework.boot:spring-boot-autoconfigure", version.ref = "springBoot" }
+spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test", version.ref = "springBoot" }
+
+reactor-core = { module = "io.projectreactor:reactor-core", version.ref = "reactor" }
+reactor-kotlin-extensions = { module = "io.projectreactor.kotlin:reactor-kotlin-extensions", version.ref = "reactorKotlin" }
+
+tapsi-metrics-core = { module = "box.tapsi.libs:metrics-core", version.ref = "metricsCore" }
+tapsi-utilities-starter = { module = "box.tapsi.libs:utilities-starter", version.ref = "utilitiesStarter" }
+projectreactor-retry-aop = { module = "io.github.mahdibohloul:projectreactor-retry-aop", version.ref = "retryAop" }
+
+kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
+kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", version.ref = "kotlin" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
+maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }

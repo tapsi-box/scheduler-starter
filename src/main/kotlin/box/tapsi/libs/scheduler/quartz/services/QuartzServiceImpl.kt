@@ -1,6 +1,5 @@
 package box.tapsi.libs.scheduler.quartz.services
 
-import box.tapsi.libs.scheduler.quartz.annotations.OnQuartzEnabled
 import box.tapsi.libs.scheduler.quartz.metric.registry.QuartzRegistry
 import org.quartz.Job
 import org.quartz.JobBuilder
@@ -16,29 +15,27 @@ import org.quartz.TriggerListener
 import org.quartz.impl.matchers.GroupMatcher
 import org.quartz.plugins.history.LoggingJobHistoryPlugin
 import org.quartz.plugins.history.LoggingTriggerHistoryPlugin
-import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.beans.factory.getBeansWithAnnotation
 import org.springframework.context.ApplicationContext
-import org.springframework.context.annotation.Primary
 import org.springframework.scheduling.quartz.SchedulerFactoryBean
-import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import box.tapsi.libs.scheduler.quartz.annotations.JobListener as AnnotationsJobListener
 import box.tapsi.libs.scheduler.quartz.annotations.SchedulerListener as AnnotationSchedulerListener
 import box.tapsi.libs.scheduler.quartz.annotations.TriggerListener as AnnotationTriggerListener
 
-@Service
-@OnQuartzEnabled
-@Primary
+@Suppress("TooManyFunctions")
 class QuartzServiceImpl(
-  private val logger: Logger,
   private val applicationContext: ApplicationContext,
   private val schedulerFactoryBean: SchedulerFactoryBean,
   private val quartzRegistry: QuartzRegistry,
+  private val historyLoggingEnabled: Boolean = false,
 ) : QuartzService,
   InitializingBean {
+  private val logger = LoggerFactory.getLogger(QuartzServiceImpl::class.java)
+
   override fun <TJob : Job> createJob(
     jobClass: Class<TJob>,
     isDurable: Boolean,
@@ -123,6 +120,18 @@ class QuartzServiceImpl(
     }
     getTriggerListeners(applicationContext).forEach {
       schedulerFactoryBean.scheduler.listenerManager.addTriggerListener(it)
+    }
+    installHistoryLoggingPlugins()
+  }
+
+  /**
+   * Installs the Quartz history logging plugins. They log a line for every job fire and every
+   * trigger fire, which is noisy in a service with many jobs. They stay off unless the consumer
+   * sets `box.libs.scheduler.quartz.history-logging-enabled` to `true`.
+   */
+  private fun installHistoryLoggingPlugins() {
+    if (!historyLoggingEnabled) {
+      return
     }
     LoggingJobHistoryPlugin().initialize("LoggingJobHistoryPlugin", schedulerFactoryBean.scheduler, null)
     LoggingTriggerHistoryPlugin().initialize("LoggingTriggerHistoryPlugin", schedulerFactoryBean.scheduler, null)

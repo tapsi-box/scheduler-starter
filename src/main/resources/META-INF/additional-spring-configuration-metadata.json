@@ -44,6 +44,21 @@
           "description": "Disable automatic cron job scheduling (default) - schedule jobs manually."
         }
       ]
+    },
+    {
+      "name": "box.libs.scheduler.job.execution-timeout",
+      "valueType": "java.time.Duration",
+      "description": "Bounds how long one job execution may block a Quartz worker thread.",
+      "values": [
+        {
+          "value": "5m",
+          "description": "Example: fail a job that runs longer than five minutes."
+        },
+        {
+          "value": "30s",
+          "description": "Example: a tight bound for short jobs."
+        }
+      ]
     }
   ]
 }

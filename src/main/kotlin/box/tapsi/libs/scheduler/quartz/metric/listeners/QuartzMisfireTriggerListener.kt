@@ -1,23 +1,24 @@
 package box.tapsi.libs.scheduler.quartz.metric.listeners
 
-import box.tapsi.libs.scheduler.quartz.annotations.OnQuartzEnabled
 import box.tapsi.libs.scheduler.quartz.metric.registry.QuartzRegistry
 import box.tapsi.libs.scheduler.scheduler.factories.QuartzJobDetailFactory
 import org.quartz.JobExecutionContext
 import org.quartz.Trigger
 import org.quartz.TriggerListener
-import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.scheduling.quartz.SchedulerFactoryBean
 import java.time.Instant
 import box.tapsi.libs.scheduler.quartz.annotations.TriggerListener as AnnotationsTriggerListener
 
-@OnQuartzEnabled
+// @AnnotationsTriggerListener stays on the class. QuartzServiceImpl finds trigger listeners
+// with getBeansWithAnnotation, so this annotation is the discovery marker, not a stereotype.
 @AnnotationsTriggerListener
 class QuartzMisfireTriggerListener(
   private val quartzRegistry: QuartzRegistry,
   private val schedulerFactoryBean: SchedulerFactoryBean,
-  private val logger: Logger,
 ) : TriggerListener {
+  private val logger = LoggerFactory.getLogger(QuartzMisfireTriggerListener::class.java)
+
   override fun getName(): String = QuartzMisfireTriggerListener::class.java.simpleName
 
   override fun triggerFired(trigger: Trigger?, context: JobExecutionContext?) {

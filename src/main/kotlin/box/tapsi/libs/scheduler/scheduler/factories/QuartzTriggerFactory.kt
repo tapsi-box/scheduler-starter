@@ -5,10 +5,8 @@ import box.tapsi.libs.scheduler.scheduler.Trigger
 import box.tapsi.libs.scheduler.scheduler.mappers.SchedulingInstructionMapper
 import box.tapsi.libs.scheduler.scheduler.mappers.TriggerMapper
 import box.tapsi.libs.utilities.time.TimeOperator
-import org.springframework.stereotype.Component
 import org.quartz.Trigger as QuartzTrigger
 
-@Component
 class QuartzTriggerFactory(
   private val timeOperator: TimeOperator,
 ) {

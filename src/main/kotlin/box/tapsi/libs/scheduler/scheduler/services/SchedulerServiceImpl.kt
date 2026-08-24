@@ -13,19 +13,18 @@ import org.quartz.CronExpression
 import org.quartz.JobKey
 import org.quartz.ObjectAlreadyExistsException
 import org.quartz.TriggerKey
-import org.slf4j.Logger
-import org.springframework.stereotype.Service
+import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-@Service
 @ReactiveTimed
 class SchedulerServiceImpl(
-  private val logger: Logger,
   private val quartzTriggerFactory: QuartzTriggerFactory,
   private val quartzJobDetailFactory: QuartzJobDetailFactory,
   private val quartzService: QuartzService,
 ) : SchedulerService {
+  private val logger = LoggerFactory.getLogger(SchedulerServiceImpl::class.java)
+
   override fun scheduleRegularJob(
     instruction: SchedulingInstruction.Regular,
   ): Mono<Void> = Mono.defer {

@@ -9,8 +9,7 @@ import org.quartz.JobDetail
 import org.quartz.JobExecutionContext
 import org.quartz.Trigger
 import org.quartz.TriggerKey
-import org.slf4j.Logger
-import org.springframework.stereotype.Component
+import org.slf4j.LoggerFactory
 import reactor.core.observability.micrometer.Micrometer
 import reactor.core.publisher.Mono
 import java.time.Instant
@@ -18,12 +17,11 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 import box.tapsi.libs.metrics.core.MeterName as TapsiMeterName
 
-@Component
 class QuartzRegistry(
-  private val logger: Logger,
   private val meterRegistryService: MeterRegistryService,
   private val observationRegistry: ObservationRegistry,
 ) {
+  private val logger = LoggerFactory.getLogger(QuartzRegistry::class.java)
   private val lastSuccessGauges = ConcurrentHashMap<String, AtomicLong>()
 
   /**

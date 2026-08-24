@@ -10,6 +10,7 @@ retryAop = "2.0.0-RC2"
 mavenPublish = "0.34.0"
 spotless = "7.2.1"
 detekt = "1.23.6"
+dokka = "1.9.20"
 
 [libraries]
 spring-boot-starter-quartz = { module = "org.springframework.boot:spring-boot-starter-quartz", version.ref = "springBoot" }
@@ -33,3 +34,4 @@ kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotl
 maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }

@@ -1,3 +1,6 @@
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.KotlinJvm
+
 plugins {
   alias(libs.plugins.kotlin.jvm)
   alias(libs.plugins.kotlin.spring)
@@ -5,6 +8,7 @@ plugins {
   alias(libs.plugins.maven.publish)
   alias(libs.plugins.spotless)
   alias(libs.plugins.detekt)
+  alias(libs.plugins.dokka)
   `java-library`
 }
 
@@ -12,6 +16,10 @@ group = "box.tapsi.libs"
 version = "0.9.1"
 description = "scheduler-starter"
 
+// Spring Boot 3.x supports Java 17, so this library should target 17 to widen the set of
+// consumers that can use it. It cannot yet: metrics-core, utilities-starter, and
+// projectreactor-retry-aop all publish `org.gradle.jvm.version = 21`, so a Java 17 consumer
+// cannot resolve them. Lower this baseline once those libraries target 17.
 java {
   toolchain {
     languageVersion = JavaLanguageVersion.of(21)
@@ -54,18 +62,20 @@ tasks.withType<Test> {
 }
 
 mavenPublishing {
+  configure(KotlinJvm(javadocJar = JavadocJar.Dokka("dokkaHtml"), sourcesJar = true))
   publishToMavenCentral()
   signAllPublications()
 
   pom {
     name.set("scheduler-starter")
     description.set(
-      """A Spring Boot starter library providing reactive job scheduling 
-      |capabilities with Quartz integration, 
-      |supporting both regular and cron-based scheduling with automatic configuration, 
+      """A Spring Boot starter library providing reactive job scheduling
+      |capabilities with Quartz integration,
+      |supporting both regular and cron-based scheduling with automatic configuration,
       |retry mechanisms, and comprehensive monitoring.""".trimMargin()
     )
     url.set("https://github.com/tapsi-box/scheduler-starter")
+    inceptionYear.set("2025")
     licenses {
       license {
         name.set("MIT License")
@@ -83,6 +93,8 @@ mavenPublishing {
     }
     scm {
       url.set("https://github.com/tapsi-box/scheduler-starter")
+      connection.set("scm:git:https://github.com/tapsi-box/scheduler-starter.git")
+      developerConnection.set("scm:git:ssh://git@github.com/tapsi-box/scheduler-starter.git")
     }
   }
 }
@@ -145,4 +157,3 @@ tasks.check {
 }
 
 data class Check(val name: String, val expectedValue: String)
-

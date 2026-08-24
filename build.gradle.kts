@@ -1,11 +1,10 @@
 plugins {
-  kotlin("jvm") version "1.9.23"
-  kotlin("plugin.spring") version "1.9.23"
-  id("io.spring.dependency-management") version "1.1.7"
+  alias(libs.plugins.kotlin.jvm)
+  alias(libs.plugins.kotlin.spring)
 
-  id("com.vanniktech.maven.publish") version "0.34.0"
-  id("com.diffplug.spotless") version "7.2.1"
-  id("io.gitlab.arturbosch.detekt") version "1.23.6"
+  alias(libs.plugins.maven.publish)
+  alias(libs.plugins.spotless)
+  alias(libs.plugins.detekt)
   `java-library`
 }
 
@@ -24,22 +23,21 @@ repositories {
 }
 
 dependencies {
-  api("org.springframework.boot:spring-boot-starter-quartz:3.5.5")
+  api(libs.spring.boot.starter.quartz)
 
-  implementation("io.projectreactor:reactor-core:3.7.9")
-  implementation("box.tapsi.libs:metrics-core:1.0.2")
-  implementation("box.tapsi.libs:utilities-starter:0.9.1")
-  implementation("org.springframework:spring-context:6.2.10")
-  implementation("org.springframework.boot:spring-boot-autoconfigure:3.5.5")
-  implementation("io.github.mahdibohloul:projectreactor-retry-aop:2.0.0-RC2")
-  implementation("org.jetbrains.kotlin:kotlin-reflect:1.9.23")
-  implementation("io.projectreactor.kotlin:reactor-kotlin-extensions:1.2.3")
+  implementation(libs.reactor.core)
+  implementation(libs.tapsi.metrics.core)
+  implementation(libs.tapsi.utilities.starter)
+  implementation(libs.spring.context)
+  implementation(libs.spring.boot.autoconfigure)
+  implementation(libs.projectreactor.retry.aop)
+  implementation(libs.kotlin.reflect)
+  implementation(libs.reactor.kotlin.extensions)
 
+  testImplementation(libs.spring.boot.starter.test)
+  testImplementation(libs.kotlin.test.junit5)
 
-  testImplementation("org.springframework.boot:spring-boot-starter-test:3.5.5")
-  testImplementation("org.jetbrains.kotlin:kotlin-test-junit5:1.9.23")
-
-  testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+  testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 kotlin {

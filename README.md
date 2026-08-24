@@ -81,37 +81,39 @@ import box.tapsi.libs.scheduler.scheduler.schedulers.*
 // Regular scheduler for one-time jobs
 @Component
 class EmailNotificationScheduler(
-  private val schedulerService: SchedulerService
+  schedulerService: SchedulerService
 ) : RegularScheduler(schedulerService) {
 
-  override fun execute(jobStore: JobStore?): Mono<Void> {
-    return Mono.fromRunnable {
-      // Send email notification logic
-      println("Sending email notification...")
-    }.then()
-  }
+  override fun execute(jobStore: JobStore?): Mono<Void> = Mono.fromRunnable<Void> {
+    // Send email notification logic
+    println("Sending email notification...")
+  }.then()
 
-  override fun getJobGroup(): JobGroup = JobGroup("notifications")
-  override fun getTriggerGroup(): TriggerGroup = TriggerGroup("email-triggers")
+  override fun cancel(jobStore: JobStore?): Mono<Void> = Mono.empty()
+
+  override fun createJobId(jobStore: JobStore): String = "email-notification"
+  override fun getJobGroup(): JobGroup = JobGroup.fromString("notifications")
+  override fun getTriggerGroup(): TriggerGroup = TriggerGroup.fromString("email-triggers")
 }
 
 // Cron scheduler for recurring jobs
 @Component
 class DataCleanupScheduler(
-  private val schedulerService: SchedulerService
+  schedulerService: SchedulerService
 ) : CronScheduler(schedulerService) {
 
   override fun getCronExpression(): String = "0 0 2 * * ?" // Daily at 2 AM
 
-  override fun execute(jobStore: JobStore?): Mono<Void> {
-    return Mono.fromRunnable {
-      // Data cleanup logic
-      println("Cleaning up old data...")
-    }.then()
-  }
+  override fun execute(jobStore: JobStore?): Mono<Void> = Mono.fromRunnable<Void> {
+    // Data cleanup logic
+    println("Cleaning up old data...")
+  }.then()
 
-  override fun getJobGroup(): JobGroup = JobGroup("maintenance")
-  override fun getTriggerGroup(): TriggerGroup = TriggerGroup("cleanup-triggers")
+  override fun cancel(jobStore: JobStore?): Mono<Void> = Mono.empty()
+
+  override fun createJobId(jobStore: JobStore): String = "data-cleanup"
+  override fun getJobGroup(): JobGroup = JobGroup.fromString("maintenance")
+  override fun getTriggerGroup(): TriggerGroup = TriggerGroup.fromString("cleanup-triggers")
 }
 ```
 
@@ -130,12 +132,12 @@ class TaskService(
 
     val instruction = SchedulingInstruction.Regular(
       fireTimestamp = fireTime,
-      scheduler = TaskScheduler::class,
-      jobStore = JobStore(mapOf("taskId" to taskId)),
+      scheduler = EmailNotificationScheduler::class,
+      jobStore = JobStore(mutableMapOf("taskId" to taskId)),
       jobId = "task-$taskId",
       retriedCount = 3,
-      jobGroup = JobGroup("tasks"),
-      triggerGroup = TriggerGroup("task-triggers")
+      jobGroup = JobGroup.fromString("tasks"),
+      triggerGroup = TriggerGroup.fromString("task-triggers")
     )
 
     schedulerService.scheduleRegularJob(instruction)
@@ -152,20 +154,21 @@ class TaskService(
 ```kotlin
 @Component
 class ReportGenerationScheduler(
-  private val schedulerService: SchedulerService
+  schedulerService: SchedulerService
 ) : CronScheduler(schedulerService) {
 
   override fun getCronExpression(): String = "0 0 9 * * MON-FRI" // Weekdays at 9 AM
 
-  override fun execute(jobStore: JobStore?): Mono<Void> {
-    return Mono.fromRunnable {
-      // Generate daily reports
-      generateReports()
-    }.then()
-  }
+  override fun execute(jobStore: JobStore?): Mono<Void> = Mono.fromRunnable<Void> {
+    // Generate daily reports
+    generateReports()
+  }.then()
 
-  override fun getJobGroup(): JobGroup = JobGroup("reports")
-  override fun getTriggerGroup(): TriggerGroup = TriggerGroup("report-triggers")
+  override fun cancel(jobStore: JobStore?): Mono<Void> = Mono.empty()
+
+  override fun createJobId(jobStore: JobStore): String = "report-generation"
+  override fun getJobGroup(): JobGroup = JobGroup.fromString("reports")
+  override fun getTriggerGroup(): TriggerGroup = TriggerGroup.fromString("report-triggers")
 
   private fun generateReports() {
     // Report generation logic
@@ -182,7 +185,7 @@ class JobManagementService(
 ) {
 
   fun cancelJob(jobId: String) {
-    schedulerService.deleteJob(jobId, JobGroup("tasks"))
+    schedulerService.deleteJob(jobId, JobGroup.fromString("tasks"))
       .subscribe(
         { println("Job cancelled successfully") },
         { error -> println("Failed to cancel job: $error") }
@@ -190,10 +193,13 @@ class JobManagementService(
   }
 
   fun rescheduleJob(triggerId: String, newCronExpression: String) {
-    val newTrigger = Trigger.Cron(
+    val newTrigger = Trigger.CronTrigger(
+      jobGroup = JobGroup.fromString("tasks"),
+      jobId = "task-$triggerId",
+      triggerGroup = TriggerGroup.fromString("task-triggers"),
       triggerId = triggerId,
-      cronExpression = newCronExpression,
-      triggerGroup = TriggerGroup("task-triggers")
+      startTimestamp = Instant.now(),
+      cronExpression = newCronExpression
     )
 
     schedulerService.reschedule(triggerId, newTrigger)
@@ -203,31 +209,55 @@ class JobManagementService(
       )
   }
 
-  fun getActiveTriggers(): Flux<Trigger> {
-    return schedulerService.getTriggers(TriggerGroup("task-triggers"))
-  }
+  fun getActiveTriggers(): Flux<Trigger> =
+    schedulerService.getTriggers(TriggerGroup.fromString("task-triggers"))
 }
 ```
 
 ### Retry Configuration
 
+A retry is driven by `@ReactiveRetryable` from `projectreactor-retry-aop`. Put the annotation on
+the scheduler, and point its `interceptor` attribute at this library's interceptor bean. On a
+failure, the interceptor reschedules the job for a later time and carries the attempt count in the
+job store.
+
+Two things are required:
+
+1. `@EnableReactiveRetry` on a configuration class. The retry library ships no auto-configuration,
+   so nothing intercepts without it.
+2. `interceptor = RetryJobInterceptor.RETRY_JOB_INTERCEPTOR_NAME`. The retry library resolves the
+   interceptor from the context by that bean name.
+
 ```kotlin
+@Configuration
+@EnableReactiveRetry
+class SchedulerRetryConfiguration
+
 @Component
+@ReactiveRetryable(
+  interceptor = RetryJobInterceptor.RETRY_JOB_INTERCEPTOR_NAME,
+  maxAttempts = 5,
+  exponentialBackoff = true,
+  backOffMinDelay = 60_000,      // first retry after one minute
+  backOffFactor = 2.0,           // then two, four, eight minutes ...
+  backOffMaxDelay = 3_600_000,   // never wait longer than one hour
+  include = [IllegalStateException::class],
+  exclude = [IllegalArgumentException::class],
+)
 class RetryableTaskScheduler(
-  private val schedulerService: SchedulerService
+  schedulerService: SchedulerService
 ) : RegularScheduler(schedulerService) {
 
-  override fun execute(jobStore: JobStore?): Mono<Void> {
-    return Mono.fromRunnable {
-      // Task that might fail and need retry
-      performUnreliableOperation()
-    }.then()
-  }
+  override fun execute(jobStore: JobStore?): Mono<Void> = Mono.fromRunnable<Void> {
+    // Task that might fail and need retry
+    performUnreliableOperation()
+  }.then()
 
-  override fun getRetriedCount(jobStore: JobStore?): Int = 5 // Max 5 retries
+  override fun cancel(jobStore: JobStore?): Mono<Void> = Mono.empty()
 
-  override fun getJobGroup(): JobGroup = JobGroup("retryable-tasks")
-  override fun getTriggerGroup(): TriggerGroup = TriggerGroup("retry-triggers")
+  override fun createJobId(jobStore: JobStore): String = "retryable-task"
+  override fun getJobGroup(): JobGroup = JobGroup.fromString("retryable-tasks")
+  override fun getTriggerGroup(): TriggerGroup = TriggerGroup.fromString("retry-triggers")
 
   private fun performUnreliableOperation() {
     // Operation that might fail
@@ -245,12 +275,25 @@ box:
     scheduler:
       quartz:
         enabled: true  # Enable Quartz integration
+        history-logging-enabled: false  # Quartz job/trigger history logs. Off by default.
       cron-job:
         scheduling-enabled: true  # Enable auto-scheduling of cron jobs
+        scheduling-timeout: 60s  # Startup fails if scheduling takes longer than this
         scheduling-excludes: # Exclude specific cron jobs from auto-scheduling
           - "maintenanceScheduler"
           - "backupScheduler"
+      job:
+        execution-timeout: 5m  # Optional. No value means a job execution has no time limit.
 ```
+
+| Property | Default | Description |
+| --- | --- | --- |
+| `quartz.enabled` | `false` if absent | Turns on the Quartz-backed scheduler. Without it, the no-op service is used and no job runs. |
+| `quartz.history-logging-enabled` | `false` | Installs the Quartz history logging plugins. They log every job fire and every trigger fire. |
+| `cron-job.scheduling-enabled` | `false` | Schedules every `CronScheduler` bean once the application is ready. |
+| `cron-job.scheduling-timeout` | `60s` | How long the startup waits for that scheduling. The application fails to start if it takes longer. |
+| `cron-job.scheduling-excludes` | empty | Bean names to skip during auto-scheduling. |
+| `job.execution-timeout` | none | Bounds how long one job execution may block a Quartz worker thread. Without it, a job that never terminates holds its thread for the life of the process. |
 
 ### Quartz Configuration
 
@@ -291,12 +334,12 @@ class SchedulerServiceTest {
     val fireTime = Instant.now().plus(1, ChronoUnit.MINUTES)
     val instruction = SchedulingInstruction.Regular(
       fireTimestamp = fireTime,
-      scheduler = TestScheduler::class,
+      scheduler = EmailNotificationScheduler::class,
       jobStore = JobStore(),
       jobId = "test-job",
       retriedCount = null,
-      jobGroup = JobGroup("test"),
-      triggerGroup = TriggerGroup("test-triggers")
+      jobGroup = JobGroup.fromString("test"),
+      triggerGroup = TriggerGroup.fromString("test-triggers")
     )
 
     StepVerifier.create(schedulerService.scheduleRegularJob(instruction))
@@ -308,12 +351,12 @@ class SchedulerServiceTest {
     val instruction = SchedulingInstruction.Cron(
       fireTimestamp = null,
       cronExpression = "0 0 12 * * ?",
-      scheduler = TestCronScheduler::class,
+      scheduler = DataCleanupScheduler::class,
       jobStore = JobStore(),
       jobId = "test-cron-job",
       retriedCount = null,
-      jobGroup = JobGroup("test"),
-      triggerGroup = TriggerGroup("test-triggers")
+      jobGroup = JobGroup.fromString("test"),
+      triggerGroup = TriggerGroup.fromString("test-triggers")
     )
 
     StepVerifier.create(schedulerService.scheduleCronJob(instruction))

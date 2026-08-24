@@ -1,5 +1,6 @@
 package box.tapsi.libs.scheduler.scheduler.jobs
 
+import box.tapsi.libs.scheduler.SchedulerProperties
 import box.tapsi.libs.scheduler.quartz.metric.registry.QuartzRegistry
 import box.tapsi.libs.scheduler.scheduler.SchedulerException
 import box.tapsi.libs.scheduler.scheduler.factories.QuartzJobDetailFactory
@@ -23,6 +24,7 @@ import reactor.kotlin.core.publisher.switchIfEmpty
 class DefaultSchedulerJob(
   private val applicationContext: ApplicationContext,
   private val quartzRegistry: QuartzRegistry,
+  private val schedulerProperties: SchedulerProperties,
 ) : QuartzJobBean() {
   private val logger = LoggerFactory.getLogger(this::class.java)
 
@@ -43,7 +45,10 @@ class DefaultSchedulerJob(
         logger.error("Internal Error executing scheduler for ${context.jobDetail?.key}", it)
       }
       .addTraceIdToReactorContext()
-      .block()
+      // A job chain that never terminates holds a Quartz worker thread for the life of the
+      // process. `box.libs.scheduler.job.execution-timeout` bounds the wait. It has no default,
+      // because a wrong finite value would fail a job that is only slow.
+      .let { execution -> blockWithOptionalTimeout(execution, context) }
     logger.info("Job ${context.jobDetail.key.name} executed")
   }
 
@@ -79,6 +84,13 @@ class DefaultSchedulerJob(
   }.flatMap { cronScheduler ->
     cronScheduler.execute(jobStore)
   }.withContextualObject(context)
+
+  private fun blockWithOptionalTimeout(execution: Mono<Void>, context: JobExecutionContext): Void? {
+    val timeout = schedulerProperties.job.executionTimeout
+      ?: return execution.block()
+    logger.debug("Job {} runs with an execution timeout of {}", context.jobDetail.key, timeout)
+    return execution.block(timeout)
+  }
 
   private fun couldIgnoreError(err: Throwable): Boolean = err !is SchedulerException.NoSchedulerKeyFoundException &&
     err !is SchedulerException.NoJobStoreFoundException

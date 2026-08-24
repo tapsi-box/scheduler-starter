@@ -2,6 +2,7 @@ package box.tapsi.libs.scheduler.autoconfigure
 
 import box.tapsi.libs.metrics.core.services.MeterRegistryService
 import box.tapsi.libs.metrics.core.services.MeterRegistryServiceImpl
+import box.tapsi.libs.scheduler.SchedulerProperties
 import box.tapsi.libs.scheduler.quartz.metric.listeners.QuartzMisfireTriggerListener
 import box.tapsi.libs.scheduler.quartz.metric.registry.QuartzRegistry
 import box.tapsi.libs.scheduler.quartz.services.NoOpQuartzService
@@ -25,6 +26,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.scheduling.quartz.SchedulerFactoryBean
+import java.time.Duration
 
 /**
  * Verifies the bean wiring of [SchedulerAutoConfiguration].
@@ -166,6 +168,36 @@ class SchedulerAutoConfigurationTest {
     // when + verify
     runner.run { context ->
       assertThat(context).hasSingleBean(CronJobAutoScheduler::class.java)
+    }
+  }
+
+  @Test
+  fun `should bind the new timeout and history logging properties`() {
+    // given
+    val runner = contextRunner.withPropertyValues(
+      "box.libs.scheduler.quartz.enabled=true",
+      "box.libs.scheduler.quartz.history-logging-enabled=true",
+      "box.libs.scheduler.job.execution-timeout=30s",
+      "box.libs.scheduler.cron-job.scheduling-timeout=10s",
+    )
+
+    // when + verify
+    runner.run { context ->
+      val properties = context.getBean(SchedulerProperties::class.java)
+      assertThat(properties.quartz.historyLoggingEnabled).isTrue()
+      assertThat(properties.job.executionTimeout).isEqualTo(Duration.ofSeconds(30))
+      assertThat(properties.cronJob.schedulingTimeout).isEqualTo(Duration.ofSeconds(10))
+    }
+  }
+
+  @Test
+  fun `should leave the execution timeout unset by default`() {
+    // given
+    val runner = contextRunner
+
+    // when + verify
+    runner.run { context ->
+      assertThat(context.getBean(SchedulerProperties::class.java).job.executionTimeout).isNull()
     }
   }
 

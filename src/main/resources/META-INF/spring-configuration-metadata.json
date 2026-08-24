@@ -17,6 +17,12 @@
       "type": "box.tapsi.libs.scheduler.SchedulerProperties$CronJob",
       "sourceType": "box.tapsi.libs.scheduler.SchedulerProperties$CronJob",
       "description": "Cron job auto-scheduling configuration properties."
+    },
+    {
+      "name": "box.libs.scheduler.job",
+      "type": "box.tapsi.libs.scheduler.SchedulerProperties$Job",
+      "sourceType": "box.tapsi.libs.scheduler.SchedulerProperties$Job",
+      "description": "Job execution configuration properties."
     }
   ],
   "properties": [
@@ -42,11 +48,24 @@
       "defaultValue": []
     },
     {
+      "name": "box.libs.scheduler.quartz.history-logging-enabled",
+      "type": "java.lang.Boolean",
+      "sourceType": "box.tapsi.libs.scheduler.SchedulerProperties$Quartz",
+      "description": "Whether to install the Quartz history logging plugins. They log a line for every job fire and every trigger fire, so they stay off by default.",
+      "defaultValue": false
+    },
+    {
       "name": "box.libs.scheduler.cron-job.scheduling-timeout",
       "type": "java.time.Duration",
       "sourceType": "box.tapsi.libs.scheduler.SchedulerProperties$CronJob",
       "description": "How long the startup waits for the cron jobs to be scheduled. The application fails to start if the scheduling does not finish in this time.",
       "defaultValue": "60s"
+    },
+    {
+      "name": "box.libs.scheduler.job.execution-timeout",
+      "type": "java.time.Duration",
+      "sourceType": "box.tapsi.libs.scheduler.SchedulerProperties$Job",
+      "description": "How long a job execution may block a Quartz worker thread. No value means no limit. Set it to stop a job that never terminates from holding a worker thread forever."
     }
   ]
 }

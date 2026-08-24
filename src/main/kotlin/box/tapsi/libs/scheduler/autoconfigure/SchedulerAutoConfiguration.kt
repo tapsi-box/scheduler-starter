@@ -68,10 +68,12 @@ class SchedulerAutoConfiguration {
     applicationContext: ApplicationContext,
     schedulerFactoryBean: SchedulerFactoryBean,
     quartzRegistry: QuartzRegistry,
+    schedulerProperties: SchedulerProperties,
   ): QuartzService = QuartzServiceImpl(
     applicationContext = applicationContext,
     schedulerFactoryBean = schedulerFactoryBean,
     quartzRegistry = quartzRegistry,
+    historyLoggingEnabled = schedulerProperties.quartz.historyLoggingEnabled,
   )
 
   /** The fallback used when Quartz is disabled. It builds job details but schedules nothing. */

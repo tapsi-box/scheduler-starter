@@ -7,8 +7,16 @@ import java.time.Duration
 data class SchedulerProperties(
   val quartz: Quartz = Quartz(),
   val cronJob: CronJob = CronJob(),
+  val job: Job = Job(),
 ) {
-  data class Quartz(val enabled: Boolean = true)
+  data class Quartz(
+    val enabled: Boolean = true,
+    /**
+     * Whether to install the Quartz history logging plugins. They log a line for every job fire
+     * and every trigger fire, so they are off by default.
+     */
+    val historyLoggingEnabled: Boolean = false,
+  )
 
   data class CronJob(
     val schedulingEnabled: Boolean = false,
@@ -18,6 +26,14 @@ data class SchedulerProperties(
      * start if the scheduling does not finish in this time.
      */
     val schedulingTimeout: Duration = DEFAULT_SCHEDULING_TIMEOUT,
+  )
+
+  data class Job(
+    /**
+     * How long a job execution may block a Quartz worker thread. No value means no limit, which
+     * keeps the behaviour of a slow but healthy job unchanged.
+     */
+    val executionTimeout: Duration? = null,
   )
 
   companion object {

@@ -1,6 +1,5 @@
 package box.tapsi.libs.scheduler.scheduler.services
 
-import box.tapsi.libs.metrics.core.annotations.ReactiveTimed
 import box.tapsi.libs.scheduler.quartz.services.QuartzService
 import box.tapsi.libs.scheduler.scheduler.JobGroup
 import box.tapsi.libs.scheduler.scheduler.SchedulingInstruction
@@ -16,7 +15,6 @@ import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-@ReactiveTimed
 class SchedulerServiceImpl(
   private val quartzTriggerFactory: QuartzTriggerFactory,
   private val quartzJobDetailFactory: QuartzJobDetailFactory,

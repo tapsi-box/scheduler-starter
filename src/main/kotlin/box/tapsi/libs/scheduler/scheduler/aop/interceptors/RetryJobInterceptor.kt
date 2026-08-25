@@ -1,15 +1,22 @@
 package box.tapsi.libs.scheduler.scheduler.aop.interceptors
 
 import box.tapsi.libs.scheduler.quartz.metric.registry.QuartzRegistry
+import box.tapsi.libs.scheduler.quartz.services.QuartzService
 import box.tapsi.libs.scheduler.scheduler.SchedulerException
+import box.tapsi.libs.scheduler.scheduler.jobs.DefaultSchedulerJob
 import box.tapsi.libs.scheduler.scheduler.schedulers.CronScheduler
 import box.tapsi.libs.scheduler.scheduler.schedulers.DefaultScheduler
 import box.tapsi.libs.scheduler.scheduler.schedulers.RegularScheduler
 import box.tapsi.libs.scheduler.scheduler.store.JobStore
+import box.tapsi.libs.scheduler.scheduler.toJobDataMap
 import box.tapsi.libs.utilities.time.TimeOperator
+import box.tapsi.libs.utilities.time.toDate
 import io.github.mahdibohloul.projectreactor.retry.aop.annotation.ReactiveRetryable
 import org.aopalliance.intercept.MethodInterceptor
 import org.aopalliance.intercept.MethodInvocation
+import org.quartz.JobKey
+import org.quartz.ObjectAlreadyExistsException
+import org.quartz.TriggerBuilder
 import org.slf4j.LoggerFactory
 import org.springframework.core.annotation.AnnotatedElementUtils
 import reactor.core.publisher.Mono
@@ -24,6 +31,7 @@ import kotlin.reflect.full.isSuperclassOf
 class RetryJobInterceptor(
   private val timeOperator: TimeOperator,
   private val quartzRegistry: QuartzRegistry,
+  private val quartzService: QuartzService,
 ) : MethodInterceptor {
   private val logger = LoggerFactory.getLogger(this::class.java)
 
@@ -152,8 +160,94 @@ class RetryJobInterceptor(
         "Job ${invocation.method.declaringClass.simpleName} will be retried at $it later",
       )
     }.flatMap { fireTimestamp ->
-      scheduler.schedule(jobStore, fireTimestamp)
+      scheduleNativeRetry(scheduler, jobStore, fireTimestamp)
     }
+
+  /**
+   * Schedules the next attempt with a Quartz-native trigger, not a new job identity.
+   *
+   * A regular scheduler — and a cron scheduler that already fires from its retry job — adds a
+   * one-shot retry trigger to the firing job's own, stable key. A cron scheduler firing on its
+   * cadence spawns a separate `<jobId>_retry` regular job, so the recurring cron trigger stays
+   * untouched.
+   *
+   * The firing job key is rebuilt from the scheduler, not read from the [org.quartz.JobExecutionContext].
+   * The job id is stable ([box.tapsi.libs.scheduler.scheduler.getCompositeJobId] no longer changes on
+   * retry), so `createJobId` returns the base name, and the [CRON_RETRY_JOB_STORE_KEY] flag adds the
+   * retry suffix. This keeps the retry independent of the reactor-context seam.
+   */
+  private fun scheduleNativeRetry(
+    scheduler: DefaultScheduler,
+    jobStore: JobStore,
+    fireTimestamp: Instant,
+  ): Mono<Void> = Mono.defer {
+    val baseJobId = scheduler.createJobId(jobStore)
+    val jobGroup = scheduler.getJobGroup().value
+    return@defer if (scheduler is CronScheduler && !jobStore.contains(CRON_RETRY_JOB_STORE_KEY)) {
+      spawnCronRetryJob(scheduler, baseJobId, jobGroup, jobStore, fireTimestamp)
+    } else {
+      val firingJobName = if (jobStore.contains(CRON_RETRY_JOB_STORE_KEY)) {
+        "$baseJobId$CRON_RETRY_JOB_SUFFIX"
+      } else {
+        baseJobId
+      }
+      addRetryTrigger(scheduler, JobKey(firingJobName, jobGroup), jobStore, fireTimestamp)
+    }
+  }
+
+  /**
+   * Adds a one-shot retry trigger to the firing, non-durable job before its current fire completes.
+   * The job then keeps its identity across attempts, and Quartz removes it once the retries stop and
+   * its last trigger completes. The failed run's store rides the trigger data map.
+   */
+  private fun addRetryTrigger(
+    scheduler: DefaultScheduler,
+    firingJobKey: JobKey,
+    jobStore: JobStore,
+    fireTimestamp: Instant,
+  ): Mono<Void> = Mono.defer {
+    val attempt = jobStore.getInt(RETRY_COUNT_JOB_STORE_KEY) ?: 0
+    val retryTrigger = TriggerBuilder.newTrigger()
+      .withIdentity("${firingJobKey.name}_retry_$attempt", scheduler.getTriggerGroup().value)
+      .forJob(firingJobKey)
+      .startAt(fireTimestamp.toDate())
+      .usingJobData(jobStore.toJobDataMap())
+      .build()
+    quartzService.scheduleTrigger(retryTrigger)
+  }
+
+  /**
+   * Spawns a separate `<jobId>_retry` regular job for a failed cron occurrence, so the recurring
+   * cron job keeps its cadence and its store. The [CRON_RETRY_JOB_STORE_KEY] flag marks the spawned
+   * job, so its own later failures retry in place instead of spawning again.
+   */
+  private fun spawnCronRetryJob(
+    scheduler: DefaultScheduler,
+    baseJobId: String,
+    jobGroup: String,
+    jobStore: JobStore,
+    fireTimestamp: Instant,
+  ): Mono<Void> = Mono.defer {
+    val retryJobName = "$baseJobId$CRON_RETRY_JOB_SUFFIX"
+    val jobDataMap = jobStore.toJobDataMap().apply { put(CRON_RETRY_JOB_STORE_KEY, true) }
+    val retryJobDetail = quartzService.createJob(
+      jobClass = DefaultSchedulerJob::class.java,
+      isDurable = false,
+      jobName = retryJobName,
+      jobGroup = jobGroup,
+      jobDataMap = jobDataMap,
+    )
+    val retryTrigger = TriggerBuilder.newTrigger()
+      .withIdentity("${retryJobName}_trigger", scheduler.getTriggerGroup().value)
+      .startAt(fireTimestamp.toDate())
+      .build()
+    // Policy (a): one retry in flight per cron scheduler. If the retry job is already pending from
+    // an earlier failed occurrence, the duplicate is dropped. Exhaustion clears the pending retry
+    // job (it adds no trigger and completes), so a later cadence failure re-creates it — the two
+    // orderings both hold: a swallowed spawn while it exhausts, or a re-create after it cleared.
+    quartzService.scheduleJob(retryJobDetail, retryTrigger)
+      .onErrorComplete(ObjectAlreadyExistsException::class.java)
+  }
 
   private fun incrementRetryCounter(scheduler: DefaultScheduler, result: QuartzRegistry.RetryResult) {
     quartzRegistry.incrementRetry(
@@ -178,6 +272,12 @@ class RetryJobInterceptor(
 
   companion object {
     const val RETRY_COUNT_JOB_STORE_KEY = "retryCount"
+
+    /** Marks a spawned cron retry job, so its own later failures retry in place, not spawn again. */
+    const val CRON_RETRY_JOB_STORE_KEY = "cronRetryJob"
+
+    /** Suffix of the stable id of the separate regular job that retries a failed cron occurrence. */
+    const val CRON_RETRY_JOB_SUFFIX = "_retry"
     const val FIXED_OFFSET_RETRY_MILLIS = 60 * 1000L
     const val DEFAULT_BACKOFF_FACTOR = 2.0
     const val RETRY_JOB_INTERCEPTOR_NAME = "retryJobInterceptor"

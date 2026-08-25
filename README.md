@@ -59,7 +59,7 @@ scheduling with automatic configuration, retry mechanisms, and comprehensive mon
 <dependency>
     <groupId>box.tapsi.libs</groupId>
     <artifactId>scheduler-starter</artifactId>
-    <version>0.9.1</version>
+    <version>1.0.0</version>
 </dependency>
 ```
 
@@ -135,7 +135,6 @@ class TaskService(
       scheduler = EmailNotificationScheduler::class,
       jobStore = JobStore(mutableMapOf("taskId" to taskId)),
       jobId = "task-$taskId",
-      retriedCount = 3,
       jobGroup = JobGroup.fromString("tasks"),
       triggerGroup = TriggerGroup.fromString("task-triggers")
     )
@@ -218,8 +217,19 @@ class JobManagementService(
 
 A retry is driven by `@ReactiveRetryable` from `projectreactor-retry-aop`. Put the annotation on
 the scheduler, and point its `interceptor` attribute at this library's interceptor bean. On a
-failure, the interceptor reschedules the job for a later time and carries the attempt count in the
-job store.
+failure, the interceptor schedules the next attempt with a Quartz-native trigger and keeps the job
+identity stable:
+
+- A **regular** scheduler gets a one-shot retry trigger on its own, stable job key. The job keeps
+  its id across every attempt, so a `cancel` (which deletes the job by that id) stops all future
+  attempts. The failed run's job store rides the retry trigger.
+- A **cron** scheduler keeps its cadence untouched. A failed occurrence spawns a separate
+  `<jobId>_retry` regular job that carries the failed run's job store and then retries itself in
+  place. One retry runs at a time for each cron scheduler; a later failed occurrence is dropped
+  while a retry is still pending.
+
+The job stays non-durable, so Quartz removes it and its job store on its own once the retries stop
+and the last trigger completes. No manual clean-up is needed.
 
 Two things are required:
 
@@ -337,7 +347,6 @@ class SchedulerServiceTest {
       scheduler = EmailNotificationScheduler::class,
       jobStore = JobStore(),
       jobId = "test-job",
-      retriedCount = null,
       jobGroup = JobGroup.fromString("test"),
       triggerGroup = TriggerGroup.fromString("test-triggers")
     )
@@ -354,7 +363,6 @@ class SchedulerServiceTest {
       scheduler = DataCleanupScheduler::class,
       jobStore = JobStore(),
       jobId = "test-cron-job",
-      retriedCount = null,
       jobGroup = JobGroup.fromString("test"),
       triggerGroup = TriggerGroup.fromString("test-triggers")
     )

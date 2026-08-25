@@ -2,7 +2,6 @@ package box.tapsi.libs.scheduler.scheduler.factories
 
 import box.tapsi.libs.scheduler.quartz.services.QuartzService
 import box.tapsi.libs.scheduler.scheduler.SchedulingInstruction
-import box.tapsi.libs.scheduler.scheduler.getCompositeJobId
 import box.tapsi.libs.scheduler.scheduler.jobs.DefaultSchedulerJob
 import box.tapsi.libs.scheduler.scheduler.schedulers.Scheduler
 import box.tapsi.libs.scheduler.scheduler.toJobDataMap
@@ -21,7 +20,7 @@ class QuartzJobDetailFactory(
     return quartzService.createJob(
       jobClass = DefaultSchedulerJob::class.java,
       isDurable = false,
-      jobName = schedulingInstruction.getCompositeJobId(),
+      jobName = schedulingInstruction.jobId,
       jobGroup = schedulingInstruction.jobGroup.value,
       jobDataMap = jobDataMap,
     )

@@ -1,6 +1,7 @@
 package box.tapsi.libs.scheduler.scheduler.aop.interceptors
 
 import box.tapsi.libs.scheduler.quartz.metric.registry.QuartzRegistry
+import box.tapsi.libs.scheduler.quartz.services.QuartzService
 import box.tapsi.libs.utilities.time.TimeOperator
 import io.github.mahdibohloul.projectreactor.retry.aop.annotation.ReactiveRetryable
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -14,7 +15,11 @@ class RetryJobInterceptorTest {
 
   @BeforeEach
   fun setUp() {
-    interceptor = RetryJobInterceptor(mock(TimeOperator::class.java), mock(QuartzRegistry::class.java))
+    interceptor = RetryJobInterceptor(
+      mock(TimeOperator::class.java),
+      mock(QuartzRegistry::class.java),
+      mock(QuartzService::class.java),
+    )
   }
 
   // region fixed delay

@@ -10,7 +10,6 @@ import kotlin.reflect.KClass
 sealed class SchedulingInstruction {
   abstract val jobStore: JobStore
   abstract val jobId: String
-  abstract val retriedCount: Int?
   abstract val jobGroup: JobGroup
   abstract val triggerGroup: TriggerGroup
   abstract val scheduler: KClass<out Scheduler>
@@ -20,7 +19,6 @@ sealed class SchedulingInstruction {
     override val scheduler: KClass<out RegularScheduler>,
     override val jobStore: JobStore,
     override val jobId: String,
-    override val retriedCount: Int?,
     override val jobGroup: JobGroup,
     override val triggerGroup: TriggerGroup,
   ) : SchedulingInstruction()
@@ -31,7 +29,6 @@ sealed class SchedulingInstruction {
     override val scheduler: KClass<out CronScheduler>,
     override val jobStore: JobStore,
     override val jobId: String,
-    override val retriedCount: Int?,
     override val jobGroup: JobGroup,
     override val triggerGroup: TriggerGroup,
   ) : SchedulingInstruction()

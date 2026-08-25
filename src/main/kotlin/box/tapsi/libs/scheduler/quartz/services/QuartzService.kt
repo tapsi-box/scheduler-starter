@@ -19,6 +19,14 @@ interface QuartzService {
   ): JobDetail
 
   fun scheduleJob(jobDetail: JobDetail, trigger: Trigger): Mono<Void>
+
+  /**
+   * Adds [trigger] to the job it already references (`trigger.jobKey`). The retry path uses this to
+   * attach the next one-shot retry trigger to the stable, non-durable job that is firing, so the job
+   * keeps its identity across attempts and Quartz removes it once its last trigger completes.
+   */
+  fun scheduleTrigger(trigger: Trigger): Mono<Void>
+
   fun deleteJob(jobKey: JobKey): Mono<Void>
   fun rescheduleJob(triggerKey: TriggerKey, trigger: Trigger): Mono<Void>
   fun getTriggers(triggerGroup: String): Flux<Trigger>

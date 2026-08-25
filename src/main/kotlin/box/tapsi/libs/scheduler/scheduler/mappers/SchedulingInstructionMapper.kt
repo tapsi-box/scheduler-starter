@@ -2,7 +2,6 @@ package box.tapsi.libs.scheduler.scheduler.mappers
 
 import box.tapsi.libs.scheduler.scheduler.SchedulingInstruction
 import box.tapsi.libs.scheduler.scheduler.Trigger
-import box.tapsi.libs.scheduler.scheduler.getCompositeJobId
 import box.tapsi.libs.utilities.time.TimeOperator
 
 object SchedulingInstructionMapper {
@@ -16,9 +15,9 @@ object SchedulingInstructionMapper {
 
     fun toModel(instruction: SchedulingInstruction.Regular): Trigger = Trigger.SimpleTrigger(
       jobGroup = instruction.jobGroup,
-      jobId = instruction.getCompositeJobId(),
+      jobId = instruction.jobId,
       triggerGroup = instruction.triggerGroup,
-      triggerId = SIMPLE_TRIGGER_TRIGGER_ID_FORMAT.format(instruction.getCompositeJobId()),
+      triggerId = SIMPLE_TRIGGER_TRIGGER_ID_FORMAT.format(instruction.jobId),
       startTimestamp = instruction.fireTimestamp,
     )
   }
@@ -31,9 +30,9 @@ object SchedulingInstructionMapper {
       timeOperator: TimeOperator,
     ): Trigger.CronTrigger = Trigger.CronTrigger(
       jobGroup = instruction.jobGroup,
-      jobId = instruction.getCompositeJobId(),
+      jobId = instruction.jobId,
       triggerGroup = instruction.triggerGroup,
-      triggerId = CRON_TRIGGER_TRIGGER_ID_FORMAT.format(instruction.getCompositeJobId()),
+      triggerId = CRON_TRIGGER_TRIGGER_ID_FORMAT.format(instruction.jobId),
       startTimestamp = instruction.fireTimestamp ?: timeOperator.getCurrentTime(),
       cronExpression = instruction.cronExpression,
     )

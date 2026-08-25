@@ -8,7 +8,6 @@ import box.tapsi.libs.scheduler.scheduler.schedulers.DefaultScheduler
 import box.tapsi.libs.scheduler.scheduler.store.JobStore
 import box.tapsi.libs.scheduler.scheduler.toJobStore
 import box.tapsi.libs.utilities.logging.addTraceIdToReactorContext
-import box.tapsi.libs.utilities.reactor.withContextualObject
 import org.quartz.JobExecutionContext
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationContext
@@ -54,7 +53,10 @@ class DefaultSchedulerJob(
 
   private fun doExecute(context: JobExecutionContext): Mono<Void> = Mono.defer {
     logger.info("default scheduler job executed for ${context.jobDetail?.key} at ${context.fireTime}")
-    val jobStore = context.jobDetail?.jobDataMap?.toJobStore()
+    // The merged map overlays the firing trigger's data over the job data. A normal fire has an
+    // empty trigger data map, so the merge is the job data. A retry fire carries the failed run's
+    // store on the retry trigger, so the retry sees the updated store (retry count, persisted state).
+    val jobStore = context.mergedJobDataMap?.toJobStore()
     return@defer Mono.justOrEmpty(jobStore)
   }.handle { jobStore, sink: SynchronousSink<JobStore> ->
     if (!jobStore.contains(QuartzJobDetailFactory.SCHEDULER_JOB_STORE_KEY_MAP)) {
@@ -83,7 +85,7 @@ class DefaultSchedulerJob(
     logger.info("Scheduler class found for ${context.jobDetail?.key} is ${it::class.simpleName}")
   }.flatMap { cronScheduler ->
     cronScheduler.execute(jobStore)
-  }.withContextualObject(context)
+  }
 
   private fun blockWithOptionalTimeout(execution: Mono<Void>, context: JobExecutionContext): Void? {
     val timeout = schedulerProperties.job.executionTimeout

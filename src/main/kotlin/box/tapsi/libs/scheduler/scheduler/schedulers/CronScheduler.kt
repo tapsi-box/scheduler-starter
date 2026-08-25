@@ -26,7 +26,6 @@ abstract class CronScheduler(schedulerService: SchedulerService) : RegularSchedu
       jobStore = jobStore,
       scheduler = this::class,
       jobId = createJobId(jobStore),
-      retriedCount = getRetriedCount(jobStore),
       cronExpression = getCronExpression(),
       jobGroup = getJobGroup(),
       triggerGroup = getTriggerGroup(),

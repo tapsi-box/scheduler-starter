@@ -13,7 +13,7 @@ plugins {
 }
 
 group = "box.tapsi.libs"
-version = "0.9.1"
+version = "1.0.0"
 description = "scheduler-starter"
 
 // Spring Boot 3.x supports Java 17, so this library should target 17 to widen the set of

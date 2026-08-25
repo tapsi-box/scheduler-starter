@@ -75,7 +75,6 @@ class TaskService(
       scheduler = EmailNotificationScheduler::class,
       jobStore = JobStore(mutableMapOf("taskId" to taskId)),
       jobId = "task-$taskId",
-      retriedCount = 3,
       jobGroup = JobGroup.fromString("tasks"),
       triggerGroup = TriggerGroup.fromString("task-triggers"),
     )
@@ -164,7 +163,6 @@ private fun readmeTestingSnippets(schedulerService: SchedulerService) {
     scheduler = EmailNotificationScheduler::class,
     jobStore = JobStore(),
     jobId = "test-job",
-    retriedCount = null,
     jobGroup = JobGroup.fromString("test"),
     triggerGroup = TriggerGroup.fromString("test-triggers"),
   )
@@ -174,7 +172,6 @@ private fun readmeTestingSnippets(schedulerService: SchedulerService) {
     scheduler = DataCleanupScheduler::class,
     jobStore = JobStore(),
     jobId = "test-cron-job",
-    retriedCount = null,
     jobGroup = JobGroup.fromString("test"),
     triggerGroup = TriggerGroup.fromString("test-triggers"),
   )

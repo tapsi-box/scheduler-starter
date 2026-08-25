@@ -83,6 +83,14 @@ class QuartzServiceImpl(
     }
   }
 
+  override fun scheduleTrigger(trigger: Trigger): Mono<Void> = Mono.fromCallable {
+    schedulerFactoryBean.scheduler.scheduleJob(trigger)
+  }.doOnNext {
+    logger.info("Trigger ${trigger.key} added to job ${trigger.jobKey} with next fire time: $it")
+  }.doOnError {
+    logger.error("Error adding trigger ${trigger.key} to job ${trigger.jobKey}", it)
+  }.then()
+
   private fun elapsedMillis(startNanos: Long): Long = (System.nanoTime() - startNanos) / NANOS_PER_MILLI
 
   override fun deleteJob(jobKey: JobKey): Mono<Void> = Mono.fromRunnable<Void> {

@@ -57,6 +57,10 @@ class NoOpQuartzService(
       )
     }
 
+  override fun scheduleTrigger(trigger: Trigger): Mono<Void> = Mono.empty<Void>().doOnSuccess {
+    logger.info("Trigger ${trigger.key} not added to job ${trigger.jobKey} because Quartz is disabled")
+  }
+
   override fun deleteJob(jobKey: JobKey): Mono<Void> = Mono.empty<Void>()
     .doOnSuccess {
       logger.info("Job not deleted with job name: $jobKey because Quartz is disabled")

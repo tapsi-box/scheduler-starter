@@ -110,7 +110,8 @@ class SchedulerAutoConfiguration {
   fun retryJobInterceptor(
     timeOperator: TimeOperator,
     quartzRegistry: QuartzRegistry,
-  ): RetryJobInterceptor = RetryJobInterceptor(timeOperator, quartzRegistry)
+    quartzService: QuartzService,
+  ): RetryJobInterceptor = RetryJobInterceptor(timeOperator, quartzRegistry, quartzService)
 
   @Bean
   @ConditionalOnMissingBean

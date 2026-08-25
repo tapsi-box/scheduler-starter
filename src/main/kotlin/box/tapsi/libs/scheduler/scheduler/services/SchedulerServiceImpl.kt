@@ -8,7 +8,6 @@ import box.tapsi.libs.scheduler.scheduler.Trigger
 import box.tapsi.libs.scheduler.scheduler.TriggerGroup
 import box.tapsi.libs.scheduler.scheduler.factories.QuartzJobDetailFactory
 import box.tapsi.libs.scheduler.scheduler.factories.QuartzTriggerFactory
-import box.tapsi.libs.scheduler.scheduler.getCompositeJobId
 import org.quartz.CronExpression
 import org.quartz.JobKey
 import org.quartz.ObjectAlreadyExistsException
@@ -75,15 +74,15 @@ class SchedulerServiceImpl(
   }
     .doOnError(
       { it is ObjectAlreadyExistsException },
-    ) { logger.info("Cron job with id ${instruction.getCompositeJobId()} already exists") }
+    ) { logger.info("Cron job with id ${instruction.jobId} already exists") }
     .onErrorComplete(ObjectAlreadyExistsException::class.java).doOnSuccess {
       logger.info(
-        "Scheduled cron job with id ${instruction.getCompositeJobId()} " +
+        "Scheduled cron job with id ${instruction.jobId} " +
           "at ${CronExpression(instruction.cronExpression).expressionSummary}",
       )
     }.doOnError {
       logger.error(
-        "Error scheduling cron job with id ${instruction.getCompositeJobId()} " +
+        "Error scheduling cron job with id ${instruction.jobId} " +
           "at ${CronExpression(instruction.cronExpression).expressionSummary}",
         it,
       )
